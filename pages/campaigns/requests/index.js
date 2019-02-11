@@ -1,0 +1,74 @@
+import React, {Component} from 'react';
+import {Button, Table} from 'semantic-ui-react';
+import Layout from '../../../components/Layout';
+import {Link} from '../../../routes';
+import Campaign from '../../../ethereum/campaign';
+import RequestRow from '../../../components/RequestRow';
+
+export default class RequestIndex extends Component {
+
+    static async getInitialProps(props) {
+
+        const {address} = props.query;
+
+        const campaign = Campaign(address);
+        const requestCount = await campaign.methods.getRequestsCount().call();
+        const approversCount =  await campaign.methods.aproversCount().call();
+
+        const request = await Promise.all(
+            Array(parseInt(requestCount)).fill().map((element, index) => {
+                return campaign.methods.requests(index).call();
+            }));
+
+        console.log(request);
+
+        return {address, request, requestCount, approversCount};
+
+    }
+
+    renderRow() {
+        return this.props.request.map((request, index) => {
+            return <RequestRow
+                id={index}
+                key={index}
+                request={request}
+                address={this.props.address}
+                approversCount={this.props.approversCount}
+            />
+        });
+    }
+
+    render() {
+
+        const {Header, Row, HeaderCell, Body} = Table;
+
+        return (
+            <Layout>
+                <h3>Pending Requests</h3>
+
+                <Link route={`/campaigns/${this.props.address}/requests/new`}>
+                    <a>
+                        <Button primary  floated="right" style={{ marginBottom: 10 }}>Create Request</Button>
+                    </a>
+                </Link>
+                <Table>
+                    <Header>
+                        <Row>
+                            <HeaderCell>ID</HeaderCell>
+                            <HeaderCell>Description</HeaderCell>
+                            <HeaderCell>Amount</HeaderCell>
+                            <HeaderCell>Recipient</HeaderCell>
+                            <HeaderCell>Approval Count</HeaderCell>
+                            <HeaderCell>aprove</HeaderCell>
+                            <HeaderCell>finalize</HeaderCell>
+                        </Row>
+                    </Header>
+                    <Body>
+                        {this.renderRow()}
+                    </Body>
+                </Table>
+                <div>Found {this.props.requestCount} requests.</div>
+            </Layout>
+        );
+    }
+}
